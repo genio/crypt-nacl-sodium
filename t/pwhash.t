@@ -6,7 +6,7 @@ use Crypt::NaCl::Sodium qw(bin2hex);
 
 my $crypto_pwhash = Crypt::NaCl::Sodium->pwhash;
 my @passwords = (
-    "Red horse butter on the jam",
+    "Red horse butter on the jam cheese on the cracker",
     "One Ring to rule them all, One Ring to find them, One Ring to bring them all and in the darkness bind them",
 );
 
