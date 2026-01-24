@@ -965,7 +965,9 @@ hex2bin(hex_sv, ...)
         char * hex = NULL;
         char * ignore = NULL;
         char * key = NULL;
+        const char *hex_end = NULL;
         unsigned char * bin = NULL;
+
         /* idiot check our hex string and turn it into a C string */
         if (SvOK(hex_sv) && SvPOK(hex_sv)) {
             hex = SvPV(hex_sv, hex_len);
@@ -992,7 +994,7 @@ hex2bin(hex_sv, ...)
                         }
                     }
                 } else if (keylen == 7 && strnEQ(key, "max_len", 7)) {
-                    if (SvOK(ST(i + 1)) && SvIOKp(ST(i + 1))) {
+                    if (SvOK(ST(i + 1)) && (SvIOK(ST(i + 1)) || SvUOK(ST(i + 1)))) {
                         bin_max_len = SvUV(ST(i + 1));
                     }
                     else {
@@ -1001,26 +1003,34 @@ hex2bin(hex_sv, ...)
                 }
             }
         }
-        if (bin_max_len == 0) {
-            bin_max_len = hex_len;
-            if (ignore == NULL) {
-                bin_max_len = hex_len / 2;
-            }
-        }
+
+        size_t max_bin_size = (ignore == NULL) ? (hex_len / 2) : hex_len;
 
         /* ensure our binary string has enough space */
-        bin = (unsigned char *) malloc(bin_max_len + 1);
+        bin = (unsigned char *) sodium_malloc(max_bin_size + 1);
         if (bin == NULL) {
             croak("Could not allocate memory");
         }
-        memset(bin, '\0', bin_max_len + 1);
 
-        sodium_hex2bin(bin, bin_max_len + 1, hex, hex_len, ignore, &bin_len, NULL);
-        RETVAL = newSVpvn((const char * const)bin, bin_max_len < bin_len ? bin_max_len : bin_len);
+        memset(bin, '\0', max_bin_size + 1);
+
+        int status = sodium_hex2bin(bin, max_bin_size, hex, hex_len, ignore, &bin_len, &hex_end);
+
+        /* If the call was successful, truncate to max_len if user requested it */
+        if (status == 0) {
+            if (bin_max_len > 0 && bin_max_len < bin_len) {
+                bin_len = bin_max_len;
+            }
+            RETVAL = newSVpvn((const char *)bin, bin_len);
+        } else {
+            /* Handle actual errors (invalid hex, etc.) */
+            RETVAL = &PL_sv_undef;
+        }
+
     OUTPUT:
         RETVAL
     CLEANUP:
-        if (bin != NULL) free(bin);
+        if (bin != NULL) sodium_free(bin);
 
 MODULE = Crypt::NaCl::Sodium        PACKAGE = Crypt::NaCl::Sodium::secretbox
 
