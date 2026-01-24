@@ -3854,7 +3854,7 @@ key(self, passphrase, salt, ... )
                     if ( outlen < 1 ) {
                         croak("Invalid bytes: %lld", outlen);
                     }
-                    outlen = outlen + 1;
+                    outlen = outlen;
                 } else {
                     croak("Invalid argument: %s", key);
                 }
@@ -3868,7 +3868,7 @@ key(self, passphrase, salt, ... )
 
         pwd_buf = (char *)SvPV(passphrase, pwd_len);
 
-        bl = InitDataBytesLocker(aTHX_ outlen+1);
+        bl = InitDataBytesLocker(aTHX_ outlen);
         if ( crypto_pwhash_scryptsalsa208sha256(bl->bytes, outlen, pwd_buf, pwd_len, salt_buf, opslimit, memlimit) != 0 ) {
             sodium_free( bl->bytes );
             Safefree(bl);
